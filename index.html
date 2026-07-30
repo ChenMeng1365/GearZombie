@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GearZombie - 密码保险库</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface-hover: #222633;
+      --border: #2d3340;
+      --text: #e0e0e0;
+      --text-dim: #8892a0;
+      --accent: #4a9eff;
+      --accent-hover: #6bb0ff;
+      --danger: #e85d5d;
+      --danger-hover: #f47878;
+      --success: #4caf50;
+      --radius: 8px;
+      --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      --mono: 'SF Mono', 'Fira Code', 'Consolas', 'Courier New', monospace;
+    }
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding: 20px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    h1 {
+      font-size: 1.5rem;
+      margin-bottom: 4px;
+    }
+    .subtitle { color: var(--text-dim); font-size: 0.85rem; margin-bottom: 20px; }
+    .toolbar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .btn {
+      padding: 8px 16px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .btn:hover { background: var(--surface-hover); border-color: var(--accent); }
+    .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-danger:hover { color: var(--danger); border-color: var(--danger); }
+    .btn-small { padding: 3px 8px; font-size: 0.75rem; }
+    .btn-icon { padding: 3px 6px; font-size: 0.8rem; line-height: 1; }
+
+    /* 网站卡片 */
+    .website-list { display: flex; flex-direction: column; gap: 16px; }
+    .website-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+    }
+    .website-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+    .website-name {
+      font-size: 1.1rem;
+      font-weight: 600;
+      flex: 0 0 auto;
+    }
+    .website-url {
+      color: var(--text-dim);
+      font-size: 0.8rem;
+      text-decoration: none;
+    }
+    .website-url:hover { color: var(--accent); }
+    .website-actions { margin-left: auto; display: flex; gap: 6px; }
+
+    .strategy-select { display: flex; align-items: center; gap: 6px; }
+    .strategy-select label { font-size: 0.75rem; color: var(--text-dim); }
+    select {
+      padding: 3px 8px;
+      background: var(--bg);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 0.8rem;
+    }
+
+    /* 账号行 */
+    .account-list { display: flex; flex-direction: column; gap: 8px; }
+    .account-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: var(--bg);
+      border-radius: 6px;
+      flex-wrap: wrap;
+    }
+    .account-username {
+      font-weight: 500;
+      min-width: 100px;
+    }
+    .password-field {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex: 1;
+      min-width: 180px;
+    }
+    .password-display {
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      letter-spacing: 1px;
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .password-display.masked {
+      letter-spacing: 2px;
+      color: var(--text-dim);
+    }
+    .password-empty { color: var(--text-dim); font-style: italic; font-size: 0.8rem; }
+    .pw-length-input {
+      width: 50px;
+      padding: 2px 4px;
+      background: var(--bg);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 0.75rem;
+      text-align: center;
+    }
+    .account-actions { display: flex; gap: 4px; flex-wrap: wrap; }
+
+    .history-toggle {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      cursor: pointer;
+      user-select: none;
+    }
+    .history-toggle:hover { color: var(--accent); }
+    .history-list {
+      width: 100%;
+      margin-top: 4px;
+      padding: 6px 12px;
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      display: none;
+    }
+    .history-list.open { display: block; }
+    .history-item {
+      font-family: var(--mono);
+      padding: 2px 0;
+    }
+    .history-item .history-time { color: var(--text-dim); margin-right: 8px; }
+    .history-item .history-pw { color: var(--text-dim); }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px;
+      color: var(--text-dim);
+    }
+
+    /* 模态框 */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 100;
+      justify-content: center;
+      align-items: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      min-width: 360px;
+      max-width: 480px;
+    }
+    .modal h2 { font-size: 1.1rem; margin-bottom: 16px; }
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; font-size: 0.8rem; color: var(--text-dim); margin-bottom: 4px; }
+    .form-group input, .form-group select {
+      width: 100%;
+      padding: 8px 10px;
+      background: var(--bg);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      padding: 10px 20px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 0.85rem;
+      opacity: 0;
+      transition: opacity 0.3s;
+      z-index: 200;
+    }
+    .toast.show { opacity: 1; }
+    .toast.success { border-color: var(--success); }
+    .toast.error { border-color: var(--danger); }
+
+    @media (max-width: 600px) {
+      .website-header { flex-direction: column; align-items: flex-start; }
+      .website-actions { margin-left: 0; }
+    }
+  </style>
+</head>
+<body>
+
+<h1>GearZombie</h1>
+<p class="subtitle">密码保险库 - 本地存储 / 安全生成 / 历史追溯</p>
+
+<div class="toolbar">
+  <button class="btn btn-primary" onclick="UI.showAddWebsiteModal()">+ 添加网站</button>
+  <button class="btn" onclick="UI.exportToFile()">导出到文件</button>
+  <button class="btn" onclick="UI.importFromFile()">从文件导入</button>
+  <button class="btn btn-danger" onclick="UI.clearAll()">清空全部</button>
+</div>
+
+<div id="website-list" class="website-list"></div>
+<div id="empty-state" class="empty-state" style="display:none">
+  还没有网站记录，点击「添加网站」开始。
+</div>
+
+<!-- 添加网站 Modal -->
+<div class="modal-overlay" id="modal-website">
+  <div class="modal">
+    <h2>添加网站</h2>
+    <div class="form-group">
+      <label>网站名称</label>
+      <input type="text" id="w-name" placeholder="如 GitHub">
+    </div>
+    <div class="form-group">
+      <label>网站 URL</label>
+      <input type="text" id="w-url" placeholder="https://github.com">
+    </div>
+    <div class="form-group">
+      <label>密码策略</label>
+      <select id="w-strategy"></select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="UI.closeModal('modal-website')">取消</button>
+      <button class="btn btn-primary" onclick="UI.confirmAddWebsite()">添加</button>
+    </div>
+  </div>
+</div>
+
+<!-- 添加账号 Modal -->
+<div class="modal-overlay" id="modal-account">
+  <div class="modal">
+    <h2>添加账号</h2>
+    <div class="form-group">
+      <label>用户名</label>
+      <input type="text" id="a-username" placeholder="登录用户名">
+    </div>
+    <div class="form-group">
+      <label>备注（可选）</label>
+      <input type="text" id="a-note" placeholder="如：主账号">
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="UI.closeModal('modal-account')">取消</button>
+      <button class="btn btn-primary" onclick="UI.confirmAddAccount()">添加</button>
+    </div>
+  </div>
+</div>
+
+<!-- 文件导入 input -->
+<input type="file" id="import-file-input" accept=".json" style="display:none">
+
+<div class="toast" id="toast"></div>
+
+<!-- 核心库（模块化拆分，按依赖顺序加载） -->
+<script src="src/modules/random.js"></script>
+<script src="src/modules/utils.js"></script>
+<script src="src/modules/charpresets.js"></script>
+<script src="src/modules/rulepresets.js"></script>
+<script src="src/modules/strategy.js"></script>
+<script src="src/modules/registry.js"></script>
+<script src="src/modules/builtins.js"></script>
+<script src="src/modules/vault.js"></script>
+<script src="src/modules/storage.js"></script>
+<script src="src/gearzombie.js"></script>
+<!-- 页面逻辑 -->
+<script src="app.js"></script>
+
+</body>
+</html>
