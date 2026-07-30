@@ -1,13 +1,3 @@
----
-AIGC:
-  ContentProducer: '001191110102MAD55U9H0F10002'
-  ContentPropagator: '001191110102MAD55U9H0F10002'
-  Label: '1'
-  ProduceID: '16f3c459-04db-4f2c-8e39-9ad98b3fac3f'
-  PropagateID: '16f3c459-04db-4f2c-8e39-9ad98b3fac3f'
-  ReservedCode1: 'c03f0f9c-28ab-4b02-8899-f8aae8c726ea'
-  ReservedCode2: 'c03f0f9c-28ab-4b02-8899-f8aae8c726ea'
----
 
 # GearZombie
 
@@ -118,5 +108,3 @@ GearZombie/
 ## License
 
 AGPL-3.0
-
-> AI生成
