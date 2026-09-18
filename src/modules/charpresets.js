@@ -8,16 +8,17 @@
   'use strict';
 
   var charPresets = {
-    upper:        'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
-    lower:        'abcdefghijklmnopqrstuvwxyz',
-    digits:       '0123456789',
-    symbols:      '!@#$%^&*=',
-    symbolsExt:   '!@#$%^&*=-_+?',
-    upperSafe:    'ABCDEFGHJKLMNPQRSTUVWXYZ',  // 排除 I O
-    lowerSafe:    'abcdefghjkmnpqrstuvwxyz',   // 排除 i l o
-    digitsSafe:   '23456789',                  // 排除 0 1
-    hex:          '0123456789abcdef',
-    hexUpper:     '0123456789ABCDEF'
+    upper:           'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+    lower:           'abcdefghijklmnopqrstuvwxyz',
+    digits:          '0123456789',
+    symbols:         '!@#$%^&*=',
+    symbolsExt:      '!@#$%^&*=-_+?',
+    symbolsSrdcloud: "!#$%&'()*+,-./:;<=>?@[]^_\\`{|}~",  // srdcloud 策略专用（30 个特殊字符）
+    upperSafe:       'ABCDEFGHJKLMNPQRSTUVWXYZ',  // 排除 I O
+    lowerSafe:       'abcdefghjkmnpqrstuvwxyz',   // 排除 i l o
+    digitsSafe:      '23456789',                  // 排除 0 1
+    hex:             '0123456789abcdef',
+    hexUpper:        '0123456789ABCDEF'
   };
 
   if (typeof module === 'object' && module.exports) {

@@ -1,15 +1,15 @@
-
 # GearZombie
 
 密码生成与账号保险库。
 
 ## 功能
 
-- **密码生成器**：可插拔策略架构，内置 4 种策略
+- **密码生成器**：可插拔策略架构，内置 5 种策略
   - `bchrt`：大小写字母 + 数字 + 符号，排除相似字符 (1lIioO0)
   - `simple`：大小写字母 + 数字（无符号）
   - `pin`：纯数字 PIN 码
   - `am-cloud`：天翼云管控密码策略，含形似变换规避与上下文感知轮换
+  - `srdcloud`：SRDCloud 平台策略，9-32 位，禁键盘横排/斜线/逻辑连续/3 连重/用户名 3 位子串
 - **账号保险库 (Vault)**：网站 → 账号 → 密码的层级管理
   - 密码轮换时旧密码自动进入历史记录
   - 支持手动设置密码
@@ -82,7 +82,8 @@ GearZombie/
 │       ├── Engineer.md       # 工程化设计说明(模板)
 │       ├── TODO.md           # 待办清单(实例)
 │       ├── requirement.md    # 基本需求，程序骨架，默认 bchrt 策略
-│       └── revise-01.md      # am-cloud 策略需求
+│       ├── revise-01.md      # am-cloud 策略需求
+│       └── revise-02.md      # srdcloud 策略需求
 ├── src/
 │   ├── gearzombie.js         # 核心库入口 (UMD: 浏览器 + Node)
 │   ├── gearzombie.compact.js # 合并单文件版 (无模块依赖，便于嵌入)
@@ -98,7 +99,8 @@ GearZombie/
 │       └── storage.js        # 浏览器 localStorage 持久化
 ├── test/
 │   ├── test_basic.js         # 基础测试 (131 项)
-│   └── test_revise01.js      # am-cloud 策略测试 (81 项)
+│   ├── test_revise01.js      # am-cloud 策略测试 (81 项)
+│   └── test_revise02.js      # srdcloud 策略测试 (94 项)
 ├── index.html                # 浏览器 UI 页面
 ├── app.js                    # 浏览器 UI 逻辑
 ├── package.json              # Node.js 模块配置

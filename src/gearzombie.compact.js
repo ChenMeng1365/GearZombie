@@ -113,16 +113,17 @@
   // ═══════════════════════════════════════════════════════════
 
   var charPresets = {
-    upper:        'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
-    lower:        'abcdefghijklmnopqrstuvwxyz',
-    digits:       '0123456789',
-    symbols:      '!@#$%^&*=',
-    symbolsExt:   '!@#$%^&*=-_+?',
-    upperSafe:    'ABCDEFGHJKLMNPQRSTUVWXYZ',  // 排除 I O
-    lowerSafe:    'abcdefghjkmnpqrstuvwxyz',   // 排除 i l o
-    digitsSafe:   '23456789',                  // 排除 0 1
-    hex:          '0123456789abcdef',
-    hexUpper:     '0123456789ABCDEF'
+    upper:           'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+    lower:           'abcdefghijklmnopqrstuvwxyz',
+    digits:          '0123456789',
+    symbols:         '!@#$%^&*=',
+    symbolsExt:      '!@#$%^&*=-_+?',
+    symbolsSrdcloud: "!#$%&'()*+,-./:;<=>?@[]^_\\`{|}~",  // srdcloud 策略专用（30 个特殊字符）
+    upperSafe:       'ABCDEFGHJKLMNPQRSTUVWXYZ',  // 排除 I O
+    lowerSafe:       'abcdefghjkmnpqrstuvwxyz',   // 排除 i l o
+    digitsSafe:      '23456789',                  // 排除 0 1
+    hex:             '0123456789abcdef',
+    hexUpper:        '0123456789ABCDEF'
   };
 
   // ═══════════════════════════════════════════════════════════
@@ -139,6 +140,13 @@
   // 键盘行序列（用于检测键盘排序密码）
   var KEYBOARD_ROWS = [
     'qwertyuiop', 'asdfghjkl', 'zxcvbnm', '1234567890'
+  ];
+
+  // 键盘斜线序列（用于检测键盘对角线排序密码，如 1qaz）
+  // 按物理键盘列定义：每列从上到下（数字行→字母行1→字母行2→字母行3）
+  var KEYBOARD_DIAGONALS = [
+    '1qaz', '2wsx', '3edc', '4rfv', '5tgb',
+    '6yhn', '7ujm', '8ik,', '9ol.', '0p;/'
   ];
 
   // 形似变换映射表
@@ -272,6 +280,52 @@
         var check = history.slice(-3);
         for (var i = 0; i < check.length; i++) {
           if (pw === check[i]) return false;
+        }
+        return true;
+      }
+    },
+
+    // ── srdcloud 新增规则 ──
+
+    // 键盘斜线排序：不含任意键盘对角线列内 ≥3 字符的正向/反向连续子串
+    noKeyboardDiagonal: {
+      name: 'noKeyboardDiagonal',
+      validate: function (pw) {
+        var lp = _lower(pw);
+        for (var d = 0; d < KEYBOARD_DIAGONALS.length; d++) {
+          var diag = KEYBOARD_DIAGONALS[d];
+          for (var i = 0; i <= diag.length - 3; i++) {
+            var fwd = diag.substr(i, 3);
+            var rev = fwd.split('').reverse().join('');
+            if (lp.indexOf(fwd) !== -1 || lp.indexOf(rev) !== -1) return false;
+          }
+        }
+        return true;
+      }
+    },
+
+    // 相邻单字符重复 ≤2 次：不允许 3 个及以上相同字符连续出现
+    noTripleRepeat: {
+      name: 'noTripleRepeat',
+      validate: function (pw) {
+        for (var i = 2; i < pw.length; i++) {
+          if (pw[i] === pw[i - 1] && pw[i] === pw[i - 2]) return false;
+        }
+        return true;
+      }
+    },
+
+    // 用户名子串：不能包含账号的任意连续 3 位字符（忽略大小写）
+    noUsernameSubstr: {
+      name: 'noUsernameSubstr',
+      validate: function (pw, options) {
+        var username = (options && options.username) || '';
+        if (!username || username.length < 3) return true;
+        var lp = _lower(pw);
+        var u = _lower(username);
+        for (var i = 0; i <= u.length - 3; i++) {
+          var substr = u.substr(i, 3);
+          if (lp.indexOf(substr) !== -1) return false;
         }
         return true;
       }
@@ -588,6 +642,93 @@
     maxLength: 16,
     needsContext: true,
     generate: _amCloudGenerate
+  });
+
+  // ─────────────────────────────────────────────
+  // srdcloud 策略：SRDCloud 平台通行字
+  // 9-32 位可变长度，大写+小写+数字必选、特殊字符可选
+  // 禁键盘横排/斜线/逻辑连续/3连重/用户名3位子串/前3次重复
+  // ─────────────────────────────────────────────
+
+  function _srdcloudGenerate(options) {
+    options = options || {};
+    var self = this;
+
+    // 可变长度：优先用 options.length，否则在 minLength-maxLength 范围内随机
+    var minLen = options.minLength || this.minLength || 9;
+    var maxLen = options.maxLength || this.maxLength || 32;
+    var length = options.length || (secureRandomInt(maxLen - minLen + 1) + minLen);
+
+    var maxRetries = 50;
+
+    // 构建所有字符池（包括非 required 的可选字符集）
+    var allKeys = Object.keys(this.charsets);
+    var pools = {};
+    var allPoolChars = '';
+    allKeys.forEach(function (key) {
+      var filtered = '';
+      var raw = self.charsets[key];
+      for (var i = 0; i < raw.length; i++) {
+        if (self.exclude.indexOf(raw[i]) === -1) filtered += raw[i];
+      }
+      pools[key] = filtered;
+      allPoolChars += filtered;
+    });
+
+    for (var attempt = 0; attempt < maxRetries; attempt++) {
+      var passwordChars = [];
+
+      // 必选类别各取 1 个（大写、小写、数字）
+      this.required.forEach(function (key) {
+        if (pools[key].length > 0) {
+          passwordChars.push(randomChoice(pools[key]));
+        }
+      });
+
+      // 剩余长度从全字符池填充（含可选特殊字符）
+      while (passwordChars.length < length) {
+        passwordChars.push(randomChoice(allPoolChars));
+      }
+
+      // 洗牌
+      secureShuffle(passwordChars);
+      var password = passwordChars.join('');
+
+      // 规则校验
+      var allPassed = true;
+      for (var r = 0; r < this.rules.length; r++) {
+        if (!this.rules[r].validate(password, options)) { allPassed = false; break; }
+      }
+      if (allPassed) return password;
+    }
+
+    throw new Error('生成重试 ' + maxRetries + ' 次仍未满足 srdcloud 规则约束，请放宽规则或增加长度');
+  }
+
+  registry.register({
+    name: 'srdcloud',
+    description: 'SRDCloud：9-32位，大写+小写+数字必选/符号可选，禁键盘横排/斜线/逻辑连续/3连重/用户名3位子串/前3次重复',
+    charsets: {
+      upper: charPresets.upper,
+      lower: charPresets.lower,
+      digits: charPresets.digits,
+      symbols: charPresets.symbolsSrdcloud
+    },
+    required: ['upper', 'lower', 'digits'],
+    exclude: '',
+    defaultLength: 16,
+    rules: [
+      rulePresets.noKeyboardSequence,
+      rulePresets.noKeyboardDiagonal,
+      rulePresets.noSequential,
+      rulePresets.noTripleRepeat,
+      rulePresets.noUsernameSubstr,
+      rulePresets.noRecentHistory
+    ],
+    minLength: 9,
+    maxLength: 32,
+    needsContext: true,
+    generate: _srdcloudGenerate
   });
 
   // ═══════════════════════════════════════════════════════════

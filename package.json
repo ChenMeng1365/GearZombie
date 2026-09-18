@@ -4,7 +4,7 @@
   "description": "密码生成与账号保险库 - 可插拔策略、本地存储、双环境(浏览器/Node)",
   "main": "src/gearzombie.js",
   "scripts": {
-    "test": "node test/test_basic.js && node test/test_revise01.js"
+    "test": "node test/test_basic.js && node test/test_revise01.js && node test/test_revise02.js"
   },
   "keywords": [
     "password",

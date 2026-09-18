@@ -240,6 +240,7 @@
 
 <div class="toolbar">
   <button class="btn btn-primary" onclick="UI.showAddWebsiteModal()">+ 添加网站</button>
+  <button class="btn" onclick="UI.saveBackup()" title="备份当前数据到项目根目录">💾 保存备份</button>
   <button class="btn" onclick="UI.exportToFile()">导出到文件</button>
   <button class="btn" onclick="UI.importFromFile()">从文件导入</button>
   <button class="btn btn-danger" onclick="UI.clearAll()">清空全部</button>
@@ -288,6 +289,21 @@
     <div class="modal-actions">
       <button class="btn" onclick="UI.closeModal('modal-account')">取消</button>
       <button class="btn btn-primary" onclick="UI.confirmAddAccount()">添加</button>
+    </div>
+  </div>
+</div>
+
+<!-- 编辑密码 Modal -->
+<div class="modal-overlay" id="modal-edit-password">
+  <div class="modal">
+    <h2>编辑密码</h2>
+    <div class="form-group">
+      <label>新密码</label>
+      <input type="text" id="edit-pw" placeholder="输入新密码">
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="UI.closeModal('modal-edit-password')">取消</button>
+      <button class="btn btn-primary" onclick="UI.confirmEditPassword()">保存</button>
     </div>
   </div>
 </div>

@@ -10,6 +10,8 @@
   var GZ = window.GearZombie;
   var vault;
   var _currentWebsiteId = null; // 用于添加账号 modal
+  var _editSiteId = null;        // 用于编辑密码 modal
+  var _editAccId = null;         // 用于编辑密码 modal
 
   // ─────────────────────────────────────────────
   // 初始化
@@ -97,25 +99,29 @@
   function renderAccount(siteId, acc) {
     var pwdDisplay;
     if (acc.currentPassword) {
-      pwdDisplay = '<span class="password-display masked" data-pw="' + escapeHtml(acc.currentPassword) + '">'
+      pwdDisplay = '<span class="password-display masked" data-pw="' + escapeHtml(acc.currentPassword) + '"'
+                 + '>'
                  + '●'.repeat(Math.min(acc.currentPassword.length, 20))
                  + '</span>';
     } else {
       pwdDisplay = '<span class="password-empty">暂无密码</span>';
     }
 
-    // 眼睛按钮
-    var eyeBtn = '<button class="btn btn-icon" onclick="UI.togglePassword(this)" title="显示/隐藏密码">👁</button>';
-
-    // 生成/轮换密码按钮
-    var genBtn = '<button class="btn btn-small btn-primary" onclick="UI.rotatePassword(\'' + siteId + '\',\'' + acc.id + '\')">'
-               + (acc.currentPassword ? '轮换' : '生成') + '</button>';
-
     // 长度输入
     var lenInput = '<input type="number" class="pw-length-input" value="16" min="4" max="128" title="密码长度">';
 
-    // 复制按钮
+    // 按钮顺序：显示 → 复制 → 轮换 → 编辑 → 删除
+    // 1. 显示/隐藏密码
+    var eyeBtn = '<button class="btn btn-icon" onclick="UI.togglePassword(this)" title="显示/隐藏密码">👁️</button>';
+    // 2. 复制密码
     var copyBtn = '<button class="btn btn-icon" onclick="UI.copyPassword(\'' + siteId + '\',\'' + acc.id + '\')" title="复制密码">📋</button>';
+    // 3. 轮换/生成密码
+    var rotateTitle = acc.currentPassword ? '轮换密码' : '生成密码';
+    var genBtn = '<button class="btn btn-icon btn-primary" onclick="UI.rotatePassword(\'' + siteId + '\',\'' + acc.id + '\')" title="' + rotateTitle + '">🔄</button>';
+    // 4. 编辑密码（手动设置）
+    var editBtn = '<button class="btn btn-icon" onclick="UI.showEditPasswordModal(\'' + siteId + '\',\'' + acc.id + '\')" title="编辑密码">✏️</button>';
+    // 5. 删除账号
+    var deleteBtn = '<button class="btn btn-icon btn-danger" onclick="UI.deleteAccount(\'' + siteId + '\',\'' + acc.id + '\')" title="删除账号">🗑️</button>';
 
     // 历史记录
     var historyHtml = '';
@@ -134,11 +140,9 @@
     return [
       '<div class="account-row" data-acc-id="' + acc.id + '">',
       '  <span class="account-username">' + escapeHtml(acc.username) + '</span>',
-      '  <div class="password-field">' + pwdDisplay + eyeBtn + '</div>',
+      '  <div class="password-field">' + pwdDisplay + '</div>',
       '  ' + lenInput,
-      '  <div class="account-actions">' + genBtn + copyBtn
-      + ' <button class="btn btn-small btn-danger" onclick="UI.deleteAccount(\'' + siteId + '\',\'' + acc.id + '\')">删除</button>'
-      + '</div>',
+      '  <div class="account-actions">' + eyeBtn + copyBtn + genBtn + editBtn + deleteBtn + '</div>',
       '  ' + historyHtml,
       '</div>'
     ].join('');
@@ -233,7 +237,9 @@
   }
 
   function togglePassword(btn) {
-    var display = btn.parentElement.querySelector('.password-display');
+    var row = btn.closest('.account-row');
+    if (!row) return;
+    var display = row.querySelector('.password-display');
     if (!display || !display.dataset.pw) return;
     if (display.classList.contains('masked')) {
       display.textContent = display.dataset.pw;
@@ -242,7 +248,7 @@
     } else {
       display.textContent = '●'.repeat(Math.min(display.dataset.pw.length, 20));
       display.classList.add('masked');
-      btn.textContent = '👁';
+      btn.textContent = '👁️';
     }
   }
 
@@ -264,6 +270,32 @@
     vault.save();
     render();
     toast('账号已删除', 'success');
+  }
+
+  // ─────────────────────────────────────────────
+  // 编辑密码（手动设置）
+  // ─────────────────────────────────────────────
+  function showEditPasswordModal(siteId, accId) {
+    _editSiteId = siteId;
+    _editAccId = accId;
+    var acc = vault.getAccount(siteId, accId);
+    document.getElementById('edit-pw').value = acc ? (acc.currentPassword || '') : '';
+    openModal('modal-edit-password');
+    setTimeout(function () { document.getElementById('edit-pw').focus(); }, 50);
+  }
+
+  function confirmEditPassword() {
+    var pw = document.getElementById('edit-pw').value;
+    if (!pw) { toast('请输入密码', 'error'); return; }
+    try {
+      vault.setPassword(_editSiteId, _editAccId, pw);
+      vault.save();
+      closeModal('modal-edit-password');
+      render();
+      toast('密码已手动设置', 'success');
+    } catch (e) {
+      toast(e.message, 'error');
+    }
   }
 
   function toggleHistory(el) {
@@ -292,6 +324,23 @@
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     toast('已导出到文件', 'success');
+  }
+
+  function saveBackup() {
+    var json = vault.exportData();
+    var blob = new Blob([json], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    var now = new Date();
+    var ts = now.getFullYear() + pad(now.getMonth() + 1) + pad(now.getDate())
+           + '-' + pad(now.getHours()) + pad(now.getMinutes()) + pad(now.getSeconds());
+    a.download = 'gearzombie-backup-' + ts + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast('备份文件已下载，请保存到项目根目录', 'success');
   }
 
   function importFromFile() {
@@ -375,7 +424,10 @@
     copyPassword: copyPassword,
     deleteAccount: deleteAccount,
     toggleHistory: toggleHistory,
+    showEditPasswordModal: showEditPasswordModal,
+    confirmEditPassword: confirmEditPassword,
     exportToFile: exportToFile,
+    saveBackup: saveBackup,
     importFromFile: importFromFile,
     clearAll: clearAll
   };

@@ -21,6 +21,13 @@
     'qwertyuiop', 'asdfghjkl', 'zxcvbnm', '1234567890'
   ];
 
+  // 键盘斜线序列（用于检测键盘对角线排序密码，如 1qaz）
+  // 按物理键盘列定义：每列从上到下（数字行→字母行1→字母行2→字母行3）
+  var KEYBOARD_DIAGONALS = [
+    '1qaz', '2wsx', '3edc', '4rfv', '5tgb',
+    '6yhn', '7ujm', '8ik,', '9ol.', '0p;/'
+  ];
+
   // 形似变换映射表
   var LEET_MAP = { 'o': '0', 'l': '1', 'i': '1', 'e': '3', 'a': '@', 's': '$' };
   // 反向映射：把形似字符还原回字母（用于密码反向形似检测）
@@ -152,6 +159,52 @@
         var check = history.slice(-3);
         for (var i = 0; i < check.length; i++) {
           if (pw === check[i]) return false;
+        }
+        return true;
+      }
+    },
+
+    // ── srdcloud 新增规则 ──
+
+    // 键盘斜线排序：不含任意键盘对角线列内 ≥3 字符的正向/反向连续子串
+    noKeyboardDiagonal: {
+      name: 'noKeyboardDiagonal',
+      validate: function (pw) {
+        var lp = _lower(pw);
+        for (var d = 0; d < KEYBOARD_DIAGONALS.length; d++) {
+          var diag = KEYBOARD_DIAGONALS[d];
+          for (var i = 0; i <= diag.length - 3; i++) {
+            var fwd = diag.substr(i, 3);
+            var rev = fwd.split('').reverse().join('');
+            if (lp.indexOf(fwd) !== -1 || lp.indexOf(rev) !== -1) return false;
+          }
+        }
+        return true;
+      }
+    },
+
+    // 相邻单字符重复 ≤2 次：不允许 3 个及以上相同字符连续出现
+    noTripleRepeat: {
+      name: 'noTripleRepeat',
+      validate: function (pw) {
+        for (var i = 2; i < pw.length; i++) {
+          if (pw[i] === pw[i - 1] && pw[i] === pw[i - 2]) return false;
+        }
+        return true;
+      }
+    },
+
+    // 用户名子串：不能包含账号的任意连续 3 位字符（忽略大小写）
+    noUsernameSubstr: {
+      name: 'noUsernameSubstr',
+      validate: function (pw, options) {
+        var username = (options && options.username) || '';
+        if (!username || username.length < 3) return true;
+        var lp = _lower(pw);
+        var u = _lower(username);
+        for (var i = 0; i <= u.length - 3; i++) {
+          var substr = u.substr(i, 3);
+          if (lp.indexOf(substr) !== -1) return false;
         }
         return true;
       }

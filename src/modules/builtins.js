@@ -148,6 +148,93 @@
     generate: _amCloudGenerate
   });
 
+  // ─────────────────────────────────────────────
+  // srdcloud 策略：SRDCloud 平台通行字
+  // 9-32 位可变长度，大写+小写+数字必选、特殊字符可选
+  // 禁键盘横排/斜线/逻辑连续/3连重/用户名3位子串/前3次重复
+  // ─────────────────────────────────────────────
+
+  function _srdcloudGenerate(options) {
+    options = options || {};
+    var self = this;
+
+    // 可变长度：优先用 options.length，否则在 minLength-maxLength 范围内随机
+    var minLen = options.minLength || this.minLength || 9;
+    var maxLen = options.maxLength || this.maxLength || 32;
+    var length = options.length || (secureRandomInt(maxLen - minLen + 1) + minLen);
+
+    var maxRetries = 50;
+
+    // 构建所有字符池（包括非 required 的可选字符集）
+    var allKeys = Object.keys(this.charsets);
+    var pools = {};
+    var allPoolChars = '';
+    allKeys.forEach(function (key) {
+      var filtered = '';
+      var raw = self.charsets[key];
+      for (var i = 0; i < raw.length; i++) {
+        if (self.exclude.indexOf(raw[i]) === -1) filtered += raw[i];
+      }
+      pools[key] = filtered;
+      allPoolChars += filtered;
+    });
+
+    for (var attempt = 0; attempt < maxRetries; attempt++) {
+      var passwordChars = [];
+
+      // 必选类别各取 1 个（大写、小写、数字）
+      this.required.forEach(function (key) {
+        if (pools[key].length > 0) {
+          passwordChars.push(randomChoice(pools[key]));
+        }
+      });
+
+      // 剩余长度从全字符池填充（含可选特殊字符）
+      while (passwordChars.length < length) {
+        passwordChars.push(randomChoice(allPoolChars));
+      }
+
+      // 洗牌
+      secureShuffle(passwordChars);
+      var password = passwordChars.join('');
+
+      // 规则校验
+      var allPassed = true;
+      for (var r = 0; r < this.rules.length; r++) {
+        if (!this.rules[r].validate(password, options)) { allPassed = false; break; }
+      }
+      if (allPassed) return password;
+    }
+
+    throw new Error('生成重试 ' + maxRetries + ' 次仍未满足 srdcloud 规则约束，请放宽规则或增加长度');
+  }
+
+  registry.register({
+    name: 'srdcloud',
+    description: 'SRDCloud：9-32位，大写+小写+数字必选/符号可选，禁键盘横排/斜线/逻辑连续/3连重/用户名3位子串/前3次重复',
+    charsets: {
+      upper: charPresets.upper,
+      lower: charPresets.lower,
+      digits: charPresets.digits,
+      symbols: charPresets.symbolsSrdcloud
+    },
+    required: ['upper', 'lower', 'digits'],
+    exclude: '',
+    defaultLength: 16,
+    rules: [
+      rulePresets.noKeyboardSequence,
+      rulePresets.noKeyboardDiagonal,
+      rulePresets.noSequential,
+      rulePresets.noTripleRepeat,
+      rulePresets.noUsernameSubstr,
+      rulePresets.noRecentHistory
+    ],
+    minLength: 9,
+    maxLength: 32,
+    needsContext: true,
+    generate: _srdcloudGenerate
+  });
+
   // 本模块为副作用型（注册策略），无导出
   if (typeof module === 'object' && module.exports) {
     module.exports = {};
